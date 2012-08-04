@@ -1,0 +1,32 @@
+# depslib dependency file v1.0
+1343920253 source:g:\backup\workplace\cs-ipc\message.cpp
+	"Message.h"
+	<cstring>
+
+1343922502 g:\backup\workplace\cs-ipc\message.h
+	<vector>
+	<cstring>
+
+1344092404 source:g:\backup\workplace\cs-ipc\server.cpp
+	"Server.h"
+	<Windows.h>
+	<string>
+	<iostream>
+
+1344092643 g:\backup\workplace\cs-ipc\server.h
+	"defines.h"
+	"macros.h"
+	"Message.h"
+	<Windows.h>
+
+1344092715 g:\backup\workplace\cs-ipc\defines.h
+
+1344092697 g:\backup\workplace\cs-ipc\macros.h
+	<string>
+
+1344092715 source:g:\backup\workplace\cs-ipc\macros.cpp
+	"macros.h"
+	<string>
+	<cstring>
+	<windows.h>
+
