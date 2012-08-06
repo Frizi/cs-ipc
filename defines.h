@@ -6,6 +6,7 @@
 namespace CsIpc
 {
     typedef char name_t[16];
+
 }
 
 #endif // DEFINES_H_INCLUDED

@@ -1,20 +1,33 @@
 # depslib dependency file v1.0
-1343937454 source:g:\backup\workplace\cs-ipc\main.cpp
+1344105974 source:g:\backup\workplace\cs-ipc\main.cpp
 	<iostream>
 	"Server.h"
+	"Client.h"
 
-1344092643 g:\backup\workplace\cs-ipc\server.h
+1344105166 g:\backup\workplace\cs-ipc\server.h
 	"defines.h"
 	"macros.h"
-	"Message.h"
+	"EventMessage.h"
 	<Windows.h>
+	<string>
+	<map>
 
-1344092715 g:\backup\workplace\cs-ipc\defines.h
+1344097927 g:\backup\workplace\cs-ipc\defines.h
 
 1343922502 g:\backup\workplace\cs-ipc\message.h
 	<vector>
 	<cstring>
 
-1344092697 g:\backup\workplace\cs-ipc\macros.h
+1344105119 g:\backup\workplace\cs-ipc\macros.h
 	<string>
+
+1344103072 g:\backup\workplace\cs-ipc\eventmessage.h
+	<string>
+	<vector>
+	<streambuf>
+
+1344105150 g:\backup\workplace\cs-ipc\client.h
+	<string>
+	<Windows.h>
+	"EventMessage.h"
 

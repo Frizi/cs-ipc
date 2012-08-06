@@ -5,7 +5,7 @@
 
 namespace CsIpc
 {
-    std::wstring GetPublicPipename(const char* name);
+    std::wstring GetPublicPipename(const std::string& name);
 }
 
 #endif // MACROS_H_INCLUDED

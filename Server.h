@@ -3,8 +3,9 @@
 
 #include "defines.h"
 #include "macros.h"
-#include "Message.h"
+#include "EventMessage.h"
 #include <Windows.h>
+#include <string>
 #include <map>
 
 namespace CsIpc
@@ -13,17 +14,16 @@ namespace CsIpc
     class Server
     {
         public:
-            Server(const char* name);
+            Server(const std::string name);
             virtual ~Server();
-            const char* GetName();
-            void Send(std::string &target, Message &msg);
-            void Broadcast(Message &msg);
-            bool PeekMessage(std::string &sender, Message &msg);
+            const std::string& GetName();
+            void Send(std::string &target, EventMessage &msg);
+            void Broadcast(EventMessage &msg);
+            bool Peek(EventMessage &msg);
 
         protected:
-            char* name;
+            std::string name;
             HANDLE hPublicPipe;
-        private:
             std::map<std::string, HANDLE> clientPipes;
     };
 }

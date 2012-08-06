@@ -37,14 +37,19 @@
 		<Compiler>
 			<Add option="-DUNICODE" />
 			<Add option="-D_UNICODE" />
+			<Add directory="D:\Storage\H\DEV\boost_1_47_0" />
 		</Compiler>
-		<Unit filename="Message.cpp" />
-		<Unit filename="Message.h" />
+		<Unit filename="Client.cpp" />
+		<Unit filename="Client.h" />
+		<Unit filename="EventMessage.cpp" />
+		<Unit filename="EventMessage.h" />
 		<Unit filename="Server.cpp" />
 		<Unit filename="Server.h" />
 		<Unit filename="defines.h">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
+		<Unit filename="macros.cpp" />
+		<Unit filename="macros.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

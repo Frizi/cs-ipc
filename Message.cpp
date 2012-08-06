@@ -115,7 +115,6 @@ namespace CsIpc
         return buffer;
     }
 
-
     Param Message::popParam(e_poperror &err)
     {
         Param ret = this->params.back();
