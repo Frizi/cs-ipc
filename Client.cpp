@@ -1,83 +1,110 @@
 #include "Client.h"
-
-#include <Windows.h>
-#include "macros.h"
+#include "Server.h"
 
 #include <string>
 #include <iostream>
 #include <streambuf>
 #include <sstream>
 
+#include <boost/interprocess/ipc/message_queue.hpp>
+
+#include "defines.h"
+
+using namespace boost::interprocess;
+
 namespace CsIpc
 {
     Client::Client(const std::string name, const std::string servername)
     {
-        std::wstring pipename = GetPublicPipename(servername);
-        hPublicPipe = CreateFile(
-                pipename.c_str(),
-				GENERIC_WRITE,
-				FILE_SHARE_WRITE,
-				NULL,
-				OPEN_EXISTING,
-				0,
-				NULL);
+        // copy name
+        this->name = name;
+        message_queue::remove(Client::GetQueueName(this->name).c_str());
 
-        if(hPublicPipe == INVALID_HANDLE_VALUE)
+        try
         {
-            throw ("Client: Error opening public pipe");
+            this->publicQueue = new message_queue
+                    (open_only
+                    ,Server::GetQueueName(servername).c_str()
+                    );
+        } catch(interprocess_exception e) {
+            std::cerr << "[ERROR] Client: publicQueue exception: " << e.what();
+            throw e;
         }
 
-
-        pipename = GetPublicPipename("client_"+name);
-        hPrivatePipe = CreateNamedPipe(
-            pipename.c_str(),
-            PIPE_ACCESS_INBOUND,
-            PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-            PIPE_UNLIMITED_INSTANCES,
-            0,
-            1024,
-            0,
-            NULL);
-
-        if(hPrivatePipe == INVALID_HANDLE_VALUE)
+        try
         {
-            throw ("Client: Error creating private pipe");
+            this->privateQueue = new message_queue
+                    (create_only
+                    ,Client::GetQueueName(this->name).c_str()
+                    ,4                   // max messages in queue
+                    ,MAX_MSG_SIZE        // max message size
+                    );
+        } catch(interprocess_exception e) {
+            std::cerr << "[ERROR] Client: privateQueue exception: " << e.what();
+            throw e;
         }
 
-
+        EventMessage handshakeMsg(HANDSHAKE_MSG);
+        handshakeMsg.pushParam(this->name);
+        this->Send(handshakeMsg, PRIORITY_HANDSHAKE);
     }
 
     Client::~Client()
     {
-
-        CloseHandle(hPublicPipe);
-        CloseHandle(hPrivatePipe);
+        delete (message_queue*)this->privateQueue;
+        delete (message_queue*)this->publicQueue;
+        message_queue::remove(Client::GetQueueName(this->name).c_str());
     }
 
     void Client::Send(EventMessage &msg)
     {
+        this->Send(msg, PRIORITY_STANDARD);
+    }
+
+    void Client::Send(EventMessage &msg, unsigned int priority)
+    {
+        message_queue* const mq = (message_queue*)this->publicQueue;
+
         msg.setSender(this->name);
         std::stringbuf msgBuffer;
         msg.serialize(msgBuffer);
 
-        DWORD nwritten;
-        WriteFile(hPublicPipe,
-                  msgBuffer.str().c_str(),
-                  msgBuffer.str().size(),
-                  &nwritten,NULL);
+        size_t bufSize = msgBuffer.str().size();
+        if(bufSize <= MAX_MSG_SIZE)
+        {
+            mq->send(msgBuffer.str().c_str(), bufSize, priority);
+        }
+        else
+        {
+            std::cerr << "[ERROR] Client::Send: message too long\n";
+            // TODO: implement spliting messages
+        }
     }
 
     bool Client::Peek(EventMessage &msg)
     {
+        message_queue* const mq = (message_queue*)this->privateQueue;
+
         std::stringbuf msgBuffer;
 
-        char readBuffer[2048];
-        DWORD nread;
-        if(!ReadFile(hPublicPipe,readBuffer,2048,&nread,NULL)) return false;
+        char buff[MAX_MSG_SIZE];
+        size_t recvd;
+        unsigned int priority;
 
-        msgBuffer.sputn(readBuffer, nread);
-        msg.deserialize(msgBuffer);
-
+        if(mq->try_receive(buff, MAX_MSG_SIZE, recvd, priority))
+        {
+            msgBuffer.sputn(buff, recvd);
+            msg.deserialize(msgBuffer);
+        }
+        else
+            return false;
         return true;
+    }
+
+    void Client::Register(std::string eventType)
+    {
+        EventMessage regMsg(REGISTER_MSG);
+        regMsg.pushParam(eventType);
+        this->Send(regMsg, PRIORITY_REGISTER);
     }
 }

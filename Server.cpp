@@ -1,45 +1,43 @@
 #include "Server.h"
-
-#include <Windows.h>
+#include "Client.h"
 
 #include <string>
 #include <iostream>
 #include <streambuf>
 #include <sstream>
 
+#include <boost/interprocess/ipc/message_queue.hpp>
 #include <boost/foreach.hpp>
+
+#include "defines.h"
+
+using namespace boost::interprocess;
 
 namespace CsIpc
 {
+
     Server::Server(const std::string name)
     {
-        // check: http://stackoverflow.com/questions/3650876/not-getting-any-response-from-named-pipe-server?rq=1
+        this->nextEventId = 0;
+
         // copy name
         this->name = name;
 
-        std::wstring pipename = GetPublicPipename(this->name);
+        message_queue::remove(Server::GetQueueName(this->name).c_str());
 
-        hPublicPipe = CreateNamedPipe(
-                    pipename.c_str(),
-                    PIPE_ACCESS_INBOUND,
-                    PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-                    PIPE_UNLIMITED_INSTANCES,
-                    0,
-                    2048,
-                    0,
-                    NULL);
-
-
-
-        std::wcerr << L"[DEBUG] Server: Pipe name: " << pipename << "\n";
-
-        if(hPublicPipe == INVALID_HANDLE_VALUE)
+        try
         {
-            throw ("Server: Error creating public pipe");
+        this->publicQueue = new message_queue
+                (create_only
+                ,Server::GetQueueName(this->name).c_str()
+                ,16                  // max messages in queue
+                ,MAX_MSG_SIZE        // max message size
+                );
+        } catch(interprocess_exception e) {
+            std::cerr << "[ERROR] Server: publicQueue exception: " << e.what();
+            throw e;
         }
 
-        bool connected = ConnectNamedPipe(hPublicPipe,NULL);
-        std::cerr << "[DEBUG] Server: Pipe connect status: " << connected << "\n";
     }
 
 
@@ -50,10 +48,12 @@ namespace CsIpc
 
     Server::~Server()
     {
-        CloseHandle(hPublicPipe);
+        std::cerr << "[DEBUG] message_queue remove" << Server::GetQueueName(this->name) << "\n";
+        delete (message_queue*)this->publicQueue;
+        message_queue::remove(Server::GetQueueName(this->name).c_str());
     }
 
-    void Server::Send(std::string &target, EventMessage &msg)
+    void Server::Send(const std::string &target, EventMessage &msg)
     {
 
     }
@@ -65,15 +65,69 @@ namespace CsIpc
 
     bool Server::Peek(EventMessage &msg)
     {
+        message_queue* const mq = (message_queue*)this->publicQueue;
+
         std::stringbuf msgBuffer;
 
-        char readBuffer[2048];
-        DWORD nread;
-        if(!ReadFile(hPublicPipe,readBuffer,2048,&nread,NULL)) return false;
+        char buff[MAX_MSG_SIZE];
+        size_t recvd;
+        unsigned int priority;
+        if(mq->try_receive(buff, MAX_MSG_SIZE, recvd, priority))
+        {
+            msgBuffer.sputn(buff, recvd);
+            msg.deserialize(msgBuffer);
 
-        msgBuffer.sputn(readBuffer, nread);
-        msg.deserialize(msgBuffer);
+            if(priority == PRIORITY_HANDSHAKE
+               && (0 == msg.getEventType().compare(HANDSHAKE_MSG)) )
+            {
+                std::string clientName = msg.getParamString(0);
 
+                clientData* client = new clientData;
+
+                client->name = msg.getParamString(0);
+                //client->regEvts.clear();
+                try
+                {
+                    client->privateQueue = new message_queue
+                            (open_only
+                            ,Client::GetQueueName(client->name).c_str()
+                            );
+                } catch(interprocess_exception e) {
+                    delete[] client;
+                    std::cerr << "[ERROR] Client: handshake exception: " << e.what();
+                    throw e;
+                }
+
+                clientRefs.push_back(client);
+                clientsByName[client->name] = client;
+            }
+            else if(priority == PRIORITY_REGISTER
+               && (0 == msg.getEventType().compare(REGISTER_MSG)) )
+            {
+                std::string eventName = msg.getParamString(0);
+
+                eventTable_t::iterator it;
+                it = eventTable.find(eventName);
+
+                if(it == eventTable.end())
+                {
+                    eventTable[eventName] = std::pair<int,int>(nextEventId, 1);
+                    nextEventId++;
+                }
+                else
+                {
+                    it->second.second++;
+                }
+
+            }
+
+            else
+            {
+                // broadcast
+            }
+        }
+        else
+            return false;
         return true;
     }
 }

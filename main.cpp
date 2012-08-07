@@ -2,6 +2,7 @@
 #include "Server.h"
 #include "Client.h"
 
+#include <windows.h>
 
 using namespace std;
 
@@ -16,15 +17,19 @@ int main(int argc, char *argv[])
         if(in.c_str()[0] == 's')
         {
             cout << "server\n";
-            CsIpc::Server serv("testServ");
+            CsIpc::Server serv("testServer");
             CsIpc::EventMessage msg;
-            std::string sender;
+            CsIpc::EventMessage resp;
+            resp.setEventType("say");
+            resp.pushParam("Hello, World!");
             while(true)
             {
-                if(serv.Peek(sender, msg))
+                if(serv.Peek(msg))
                 {
-                    std::cout << "[MSG] " << sender << ": " << msg.getEventType() << "\n";
+                    std::cout << "[MSG] " << msg.getSender() << ": " << msg.getEventType() << "\n";
+                    serv.Send(msg.getSender(), resp);
                 }
+                Sleep(2);
             }
         }
         else
@@ -35,15 +40,16 @@ int main(int argc, char *argv[])
             CsIpc::EventMessage msg;
             while(true)
             {
-                cin >> buf;
+                std::getline(std::cin, buf);
                 msg.setEventType(buf);
                 client.Send(msg);
+                cout << "[MSG SENT]\n";
             }
         }
     } catch(const char* str)
     {
         std::cerr << "Exception raised: " << str << "\n";
-        exit(1);
+        return 1;
     }
 
     return 0;
