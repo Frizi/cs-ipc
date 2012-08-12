@@ -17,6 +17,9 @@ namespace CsIpc
             bool Peek(EventMessage &msg);
             void Register(std::string eventType);
 
+            bool IsClientConnected(std::string target);
+            void SendTo(std::string target, EventMessage &msg);
+
             static const std::string GetQueueName(std::string clientname)
             {
                 return "scipcpriv_" + clientname;

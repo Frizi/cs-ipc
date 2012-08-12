@@ -81,6 +81,7 @@ namespace CsIpc
         }
     }
 
+
     bool Client::Peek(EventMessage &msg)
     {
         message_queue* const mq = (message_queue*)this->privateQueue;

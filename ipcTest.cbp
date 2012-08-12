@@ -16,6 +16,8 @@
 				</Compiler>
 				<Linker>
 					<Add option="-lcs-ipc-d" />
+					<Add option="-lole32" />
+					<Add option="-loleaut32" />
 					<Add directory="." />
 				</Linker>
 			</Target>
@@ -29,6 +31,8 @@
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
+					<Add option="-lcs-ipc" />
+					<Add option="-lboost_date_time-mgw45-mt-1_47" />
 				</Linker>
 			</Target>
 		</Build>
@@ -37,7 +41,11 @@
 			<Add option="-fexceptions" />
 			<Add option="-DUNICODE" />
 			<Add option="-D_UNICODE" />
+			<Add directory="D:\Storage\H\DEV\boost_1_47_0" />
 		</Compiler>
+		<Linker>
+			<Add directory="D:\Storage\H\DEV\boost_1_47_0\stage\lib" />
+		</Linker>
 		<Unit filename="main.cpp" />
 		<Extensions>
 			<code_completion />

@@ -18,7 +18,6 @@ namespace CsIpc
 
     Server::Server(const std::string name)
     {
-        this->nextEventId = 0;
 
         // copy name
         this->name = name;
@@ -55,12 +54,53 @@ namespace CsIpc
 
     void Server::Send(const std::string &target, EventMessage &msg)
     {
+        clientsByName_t::iterator cdit;
+        cdit = clientsByName.find(msg.getSender());
+        if(cdit == clientsByName.end())
+        {
+            throw "Unknown client choosen as target";
+        }
+        Send(cdit->second, msg);
+    }
 
+    void Server::Send(const clientData* targetData, EventMessage &msg)
+    {
+        message_queue* const mq = (message_queue*)targetData->privateQueue;
+
+        // sender must be original
+        // --msg.setSender(this->name);
+
+        std::stringbuf msgBuffer;
+        msg.serialize(msgBuffer);
+
+        size_t bufSize = msgBuffer.str().size();
+        if(bufSize <= MAX_MSG_SIZE)
+        {
+            mq->send(msgBuffer.str().c_str(), bufSize, PRIORITY_STANDARD);
+        }
+        else
+        {
+            std::cerr << "[ERROR] Server::Send(ClientData*, EventMessage&): message too long\n";
+            // TODO: implement spliting messages
+        }
     }
 
     void Server::Broadcast(EventMessage &msg)
     {
+        std::string type = msg.getEventType();
+        std::vector<clientData*>* clients;
 
+        eventTable_t::iterator it;
+        it = eventTable.find(type);
+        if(it == eventTable.end())
+            return;
+
+        clients = &(it->second.first);
+
+        BOOST_FOREACH(clientData* client, *clients)
+        {
+            this->Send(client, msg);
+        }
     }
 
     bool Server::Peek(EventMessage &msg)
@@ -76,6 +116,18 @@ namespace CsIpc
         {
             msgBuffer.sputn(buff, recvd);
             msg.deserialize(msgBuffer);
+
+            clientData* cd;
+            if(priority != PRIORITY_HANDSHAKE)
+            {
+                clientsByName_t::iterator cdit;
+                cdit = clientsByName.find(msg.getSender());
+                if(cdit == clientsByName.end())
+                {
+                    throw "Unknown client tried to send message";
+                }
+                cd = cdit->second;
+            }
 
             if(priority == PRIORITY_HANDSHAKE
                && (0 == msg.getEventType().compare(HANDSHAKE_MSG)) )
@@ -100,30 +152,42 @@ namespace CsIpc
 
                 clientRefs.push_back(client);
                 clientsByName[client->name] = client;
+
+                return this->Peek(msg);
             }
             else if(priority == PRIORITY_REGISTER
                && (0 == msg.getEventType().compare(REGISTER_MSG)) )
             {
                 std::string eventName = msg.getParamString(0);
 
+                BOOST_FOREACH(std::string registered, cd->regEvts)
+                {
+                    if(registered.compare(eventName))
+                        return this->Peek(msg);
+                }
+
                 eventTable_t::iterator it;
+
+
                 it = eventTable.find(eventName);
+
 
                 if(it == eventTable.end())
                 {
-                    eventTable[eventName] = std::pair<int,int>(nextEventId, 1);
-                    nextEventId++;
+                    eventTable[eventName] = std::make_pair(std::vector<clientData*>(),1);
+                    eventTable[eventName].first.push_back(cd);
                 }
                 else
                 {
                     it->second.second++;
+                    it->second.first.push_back(cd);
                 }
-
+                return this->Peek(msg);
             }
 
             else
             {
-                // broadcast
+                // msg currently deserialized, all work is done
             }
         }
         else

@@ -5,10 +5,12 @@
 
 #define HANDSHAKE_MSG "csipc.handshake"
 #define REGISTER_MSG "csipc.register"
+#define CONNECTED_MSG "csipc.isconnected"
 
 
-#define PRIORITY_HANDSHAKE 3
-#define PRIORITY_REGISTER 2
+#define PRIORITY_HANDSHAKE 4
+#define PRIORITY_REGISTER 3
+#define PRIORITY_COMMAND 2
 #define PRIORITY_STANDARD 1
 
 

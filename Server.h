@@ -11,14 +11,16 @@
 
 namespace CsIpc
 {
-    typedef std::map<std::string, std::pair<int,int> > eventTable_t;
 
     struct clientData
     {
         std::string name;
         void* privateQueue;
-        std::vector<int> regEvts;
+        std::vector<std::string> regEvts;
     };
+
+    typedef std::map<std::string, std::pair<std::vector<clientData*>,int> > eventTable_t;
+    typedef std::map<std::string, clientData*> clientsByName_t;
 
     class Server
     {
@@ -35,16 +37,17 @@ namespace CsIpc
                 return "scipcpub_" + servername;
             }
         protected:
+            void Send(const clientData* targetData, EventMessage &msg);
+
             std::string name;
             void* publicQueue;
             // name of event, internal ID, times registered
 
-            unsigned int nextEventId;
-            std::map<std::string, std::pair<int,int> > eventTable;
+            eventTable_t eventTable;
 
             std::vector<clientData*> clientRefs;
 
-            std::map<std::string, clientData*> clientsByName;
+            clientsByName_t clientsByName;
     };
 }
 

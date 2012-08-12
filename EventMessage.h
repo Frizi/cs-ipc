@@ -32,7 +32,6 @@ namespace CsIpc
         void serialize(std::streambuf &sb);
         void deserialize(std::streambuf &sb);
 
-        std::string getEventType();
         void setEventType(std::string event)
         {
             this->event = event;
@@ -45,6 +44,10 @@ namespace CsIpc
         const std::string getSender()
         {
             return this->sender;
+        }
+        const std::string getEventType()
+        {
+            return this->event;
         }
 
         void pushParam( const int param );

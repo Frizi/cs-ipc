@@ -48,8 +48,6 @@
 		<Unit filename="defines.h">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
-		<Unit filename="macros.cpp" />
-		<Unit filename="macros.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

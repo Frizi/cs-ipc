@@ -169,11 +169,6 @@ namespace CsIpc
         assert(parameters.size() == parameterTypes.size());
     }
 
-    std::string EventMessage::getEventType()
-    {
-        return event;
-    }
-
     int EventMessage::paramCount()
     {
         assert(parameterTypes.size() == parameters.size());
