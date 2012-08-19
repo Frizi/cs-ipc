@@ -81,6 +81,30 @@ namespace CsIpc
         }
     }
 
+    void Client::SendTo(const std::string target, EventMessage &msg)
+    {
+        message_queue* const mq = (message_queue*)this->publicQueue;
+
+        msg.setSender(this->name);
+        std::stringbuf msgBuffer;
+        msg.serialize(msgBuffer);
+
+        size_t bufSize = msgBuffer.str().size();
+
+        EventMessage targetPacket;
+
+
+
+        if(bufSize <= MAX_MSG_SIZE)
+        {
+            mq->send(msgBuffer.str().c_str(), bufSize, PRIORITY_STANDARD);
+        }
+        else
+        {
+            std::cerr << "[ERROR] Client::Send: message too long\n";
+            // TODO: implement spliting messages
+        }
+    }
 
     bool Client::Peek(EventMessage &msg)
     {

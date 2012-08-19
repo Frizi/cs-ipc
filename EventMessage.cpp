@@ -1,7 +1,7 @@
 #include "EventMessage.h"
 #include <cassert>
 #include <iostream>
-
+#include <sstream>
 namespace CsIpc
 {
     EventMessage::EventMessage()
@@ -39,6 +39,10 @@ namespace CsIpc
 
             if(type == T_STR)
                 delete param.string;
+            else if(type == T_WSTR)
+                delete param.wstring;
+            else if(type == T_DATA)
+                delete param.data;
         }
         // ParamType vector may not be empty after freeing, because of exceptions
         parameterTypes.clear();
@@ -86,6 +90,11 @@ namespace CsIpc
                     break;
                 case T_FLOAT:
                     out.write(reinterpret_cast<char*>(&(param.floating)), sizeof(float));
+                    break;
+                case T_DATA:
+                    size = param.data->str().size();
+                    out.write((char*)size, sizeof(size_t));
+                    out.write(param.data->str().c_str(), size);
                     break;
                 default:
                     assert(false);
@@ -160,6 +169,19 @@ namespace CsIpc
                 case T_FLOAT:
                     in.read(reinterpret_cast<char*>(&(param.floating)), sizeof(float));
                     break;
+                case T_DATA:
+                    {
+                        in.read((char*)&size, sizeof(size_t));
+                        char* data = new char[size];
+                        in.read(data,size);
+                        std::stringbuf* strbuf = new std::stringbuf();
+                        strbuf->sputn(data,size);
+                        param.data = strbuf;
+                        delete[] data;
+                        // sign dead pointer
+                        data = (char*)0xDEADBEEF;
+                    }
+                    break;
                 default:
                     throw("EventMessage: Wrong parameter type in deserialization");
             }
@@ -209,6 +231,17 @@ namespace CsIpc
         parameterTypes.push_back(T_FLOAT);
     }
 
+    void EventMessage::pushParam( void* dataPtr, unsigned int dataSize)
+    {
+        ParamValue val;
+
+        std::stringbuf* dataBuf = new std::stringbuf;
+        dataBuf->sputn(reinterpret_cast<char*>(dataPtr),dataSize);
+        val.data = dataBuf;
+        parameters.push_back(val);
+        parameterTypes.push_back(T_DATA);
+    }
+
     ParamType EventMessage::getParameterType(const unsigned int which)
     {
         if(parameterTypes.size() <= which)
@@ -254,5 +287,17 @@ namespace CsIpc
             throw("EventMessage: Attempt to retrieve parameter with wrong type");
 
         return parameters[which].floating;
+    }
+
+    const void* EventMessage::getParamData(const unsigned int which, unsigned int &dataSize)
+    {
+        if(parameters.size() <= which)
+            throw("EventMessage: Attempt to access nonexistent parameter");
+        if(parameterTypes[which] != T_DATA)
+            throw("EventMessage: Attempt to retrieve parameter with wrong type");
+
+        const void* dataptr = parameters[which].data->str().c_str();
+        dataSize = parameters[which].data->str().size();
+        return dataptr;
     }
 }

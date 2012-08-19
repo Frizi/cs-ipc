@@ -12,14 +12,17 @@ namespace CsIpc
         T_FLOAT,
         T_STR,
         T_WSTR,
+        T_DATA,
         T_END // for header end
     } ParamType;
+
 
     typedef union {
         int integer;
         float floating;
         std::string* string;
         std::wstring* wstring;
+        std::stringbuf* data;
     } ParamValue;
 
     class EventMessage {
@@ -54,6 +57,7 @@ namespace CsIpc
         void pushParam( const std::string param );
         void pushParam( const std::wstring param );
         void pushParam( const float param );
+        void pushParam( void* dataPtr, unsigned int dataSize);
 
         int          paramCount();
         ParamType    getParameterType(unsigned int which);
@@ -61,6 +65,7 @@ namespace CsIpc
         std::string  getParamString(unsigned int which);
         std::wstring getParamWstring(unsigned int which);
         float        getParamFloat(unsigned int which);
+        const void*  getParamData(unsigned int which, unsigned int &dataSize);
 
     protected:
         std::string sender;
