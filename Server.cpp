@@ -184,7 +184,36 @@ namespace CsIpc
                 }
                 return this->Peek(msg);
             }
+            else if(priority == PRIORITY_REGISTER
+               && (0 == msg.getEventType().compare(UNREGISTER_MSG)) )
+            {
+                std::string eventName = msg.getParamString(0);
+                this->UnregisterEvent(cd, eventName);
+            }
+            else if(priority == PRIORITY_HANDSHAKE
+               && (0 == msg.getEventType().compare(DISCONNECT_MSG)) )
+            {
+                std::string eventName = msg.getParamString(0);
 
+                std::vector<std::string> regCopy = cd->regEvts;
+
+                BOOST_FOREACH(std::string & eventName, regCopy)
+                {
+                    this->UnregisterEvent(cd, eventName);
+                }
+
+
+                clientsByName.erase(cd->name);
+
+                BOOST_FOREACH(clientData* & cdSearch, this->clientRefs)
+                {
+                    if(cdSearch == cd)
+                    {
+                        cdSearch = this->clientRefs.back();
+                        this->clientRefs.pop_back();
+                    }
+                }
+            }
             else
             {
                 // msg currently deserialized, all work is done
@@ -194,4 +223,43 @@ namespace CsIpc
             return false;
         return true;
     }
+
+    void Server::UnregisterEvent(clientData* client, std::string eventType)
+    {
+        // search for event in client's vector
+        BOOST_FOREACH(std::string registered, client->regEvts)
+        {
+            if(registered.compare(eventType))
+            {
+                // swap with end and pop
+                registered = client->regEvts.back();
+                client->regEvts.pop_back();
+
+                eventTable_t::iterator eventIter = eventTable.find(client->name);
+
+                BOOST_FOREACH(clientData* & eventCd, eventIter->second.first)
+                {
+                    // exact pointer match
+                    if(eventCd == client)
+                    {
+                        // swap with end
+                        eventCd = eventIter->second.first.back();
+                        eventIter->second.first.pop_back();
+
+                        // decrement
+                        eventIter->second.second--;
+                        break;
+                    }
+                }
+                // if no registers left, delete event from table
+                if(eventIter->second.second == 0)
+                {
+                    eventTable.erase(eventIter);
+                }
+
+                return;
+            }
+        }
+    }
+
 }

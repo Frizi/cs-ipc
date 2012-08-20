@@ -38,7 +38,7 @@ namespace CsIpc
             }
         protected:
             void Send(const clientData* targetData, EventMessage &msg);
-
+            void UnregisterEvent(clientData* client, std::string eventType);
             std::string name;
             void* publicQueue;
             // name of event, internal ID, times registered

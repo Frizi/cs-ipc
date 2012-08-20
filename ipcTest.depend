@@ -2031,3 +2031,25 @@
 	<boost/config.hpp>
 	<boost/detail/workaround.hpp>
 
+1345372318 source:d:\workplace\cs-ipc\main.cpp
+	<iostream>
+	"Server.h"
+	"Client.h"
+	<windows.h>
+	<ctime>
+
+1345410762 d:\workplace\cs-ipc\server.h
+	<vector>
+	<map>
+	<string>
+	"EventMessage.h"
+
+1345372317 d:\workplace\cs-ipc\eventmessage.h
+	<string>
+	<vector>
+	<streambuf>
+
+1345399282 d:\workplace\cs-ipc\client.h
+	<string>
+	"EventMessage.h"
+

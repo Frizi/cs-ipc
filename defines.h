@@ -4,7 +4,9 @@
 #define MAX_MSG_SIZE 512
 
 #define HANDSHAKE_MSG "csipc.handshake"
+#define DISCONNECT_MSG "csipc.disconnect"
 #define REGISTER_MSG "csipc.register"
+#define UNREGISTER_MSG "csipc.unregister"
 #define CONNECTED_MSG "csipc.isconnected"
 
 

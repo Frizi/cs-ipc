@@ -38,6 +38,7 @@
 			<Add option="-DUNICODE" />
 			<Add option="-D_UNICODE" />
 			<Add directory="D:\Storage\H\DEV\boost_1_47_0" />
+			<Add directory="d:\dev\boost_1_50_0" />
 		</Compiler>
 		<Unit filename="Client.cpp" />
 		<Unit filename="Client.h" />

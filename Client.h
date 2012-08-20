@@ -16,6 +16,7 @@ namespace CsIpc
             void Send(EventMessage &msg, unsigned int priority);
             bool Peek(EventMessage &msg);
             void Register(std::string eventType);
+            void Unregister(std::string eventType);
 
             bool IsClientConnected(std::string target);
             void SendTo(std::string target, EventMessage &msg);

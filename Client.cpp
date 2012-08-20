@@ -51,6 +51,9 @@ namespace CsIpc
 
     Client::~Client()
     {
+        EventMessage regMsg(DISCONNECT_MSG);
+        this->Send(regMsg, PRIORITY_HANDSHAKE);
+
         delete (message_queue*)this->privateQueue;
         delete (message_queue*)this->publicQueue;
         message_queue::remove(Client::GetQueueName(this->name).c_str());
@@ -129,6 +132,13 @@ namespace CsIpc
     void Client::Register(std::string eventType)
     {
         EventMessage regMsg(REGISTER_MSG);
+        regMsg.pushParam(eventType);
+        this->Send(regMsg, PRIORITY_REGISTER);
+    }
+
+    void Client::Unregister(std::string eventType)
+    {
+        EventMessage regMsg(UNREGISTER_MSG);
         regMsg.pushParam(eventType);
         this->Send(regMsg, PRIORITY_REGISTER);
     }
