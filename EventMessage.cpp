@@ -2,6 +2,22 @@
 #include <cassert>
 #include <iostream>
 #include <sstream>
+#include <cassert>
+
+#ifdef DEBUG
+    void debug_assertion(const std::string msg, const std::string file, const int line)
+    {
+        std::cout << "Fail: " << msg << "\nOn " << file << ":" << line << "\n";
+        assert(false);
+    }
+
+    #define FAIL(x) (debug_assertion(x, __FILE__, __LINE__))
+#else
+    #define FAIL(x) (throw std::logic_error(x))
+#endif
+
+
+
 namespace CsIpc
 {
     EventMessage::EventMessage()
@@ -245,16 +261,16 @@ namespace CsIpc
     ParamType EventMessage::getParameterType(const unsigned int which)
     {
         if(parameterTypes.size() <= which)
-            throw("EventMessage: Attempt to access nonexistent parameter's type");
+            FAIL("EventMessage: Attempt to access nonexistent parameter's type");
         return parameterTypes[which];
     }
 
     int EventMessage::getParamInt(const unsigned int which)
     {
         if(parameters.size() <= which)
-            throw("EventMessage: Attempt to access nonexistent parameter");
+            FAIL("EventMessage: Attempt to access nonexistent parameter");
         if(parameterTypes[which] != T_INT)
-            throw("EventMessage: Attempt to retrieve parameter with wrong type");
+            FAIL("EventMessage: Attempt to retrieve parameter with wrong type");
 
         return parameters[which].integer;
     }
@@ -262,9 +278,9 @@ namespace CsIpc
     std::string EventMessage::getParamString(const unsigned int which)
     {
         if(parameters.size() <= which)
-            throw("EventMessage: Attempt to access nonexistent parameter");
+            FAIL("EventMessage: Attempt to access nonexistent parameter");
         if(parameterTypes[which] != T_STR)
-            throw("EventMessage: Attempt to retrieve parameter with wrong type");
+            FAIL("EventMessage: Attempt to retrieve parameter with wrong type");
 
         return *(parameters[which].string);
     }
@@ -272,9 +288,9 @@ namespace CsIpc
     std::wstring EventMessage::getParamWstring(const unsigned int which)
     {
         if(parameters.size() <= which)
-            throw("EventMessage: Attempt to access nonexistent parameter");
+            FAIL("EventMessage: Attempt to access nonexistent parameter");
         if(parameterTypes[which] != T_WSTR)
-            throw("EventMessage: Attempt to retrieve parameter with wrong type");
+            FAIL("EventMessage: Attempt to retrieve parameter with wrong type");
 
         return *(parameters[which].wstring);
     }
@@ -282,9 +298,9 @@ namespace CsIpc
     float EventMessage::getParamFloat(const unsigned int which)
     {
         if(parameters.size() <= which)
-            throw("EventMessage: Attempt to access nonexistent parameter");
+            FAIL("EventMessage: Attempt to access nonexistent parameter");
         if(parameterTypes[which] != T_FLOAT)
-            throw("EventMessage: Attempt to retrieve parameter with wrong type");
+            FAIL("EventMessage: Attempt to retrieve parameter with wrong type");
 
         return parameters[which].floating;
     }
@@ -292,9 +308,9 @@ namespace CsIpc
     const void* EventMessage::getParamData(const unsigned int which, unsigned int &dataSize)
     {
         if(parameters.size() <= which)
-            throw("EventMessage: Attempt to access nonexistent parameter");
+            FAIL("EventMessage: Attempt to access nonexistent parameter");
         if(parameterTypes[which] != T_DATA)
-            throw("EventMessage: Attempt to retrieve parameter with wrong type");
+            FAIL("EventMessage: Attempt to retrieve parameter with wrong type");
 
         const void* dataptr = parameters[which].data->str().c_str();
         dataSize = parameters[which].data->str().size();

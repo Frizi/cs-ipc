@@ -1,1 +1,2 @@
-client disconnect handling - server blocks when client stops listening
+automatic DC detection - server stops when client stops responding without DC signal
+long message slicing

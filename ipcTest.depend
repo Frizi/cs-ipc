@@ -1,12 +1,13 @@
 # depslib dependency file v1.0
-1344811239 source:g:\backup\workplace\cs-ipc\main.cpp
+1345470304 source:g:\backup\workplace\cs-ipc\main.cpp
 	<iostream>
 	"Server.h"
 	"Client.h"
 	<windows.h>
 	<ctime>
+	<signal.h>
 
-1344727117 g:\backup\workplace\cs-ipc\server.h
+1345464269 g:\backup\workplace\cs-ipc\server.h
 	<vector>
 	<map>
 	<string>
@@ -21,12 +22,12 @@
 1344105119 g:\backup\workplace\cs-ipc\macros.h
 	<string>
 
-1344848188 g:\backup\workplace\cs-ipc\eventmessage.h
+1344849190 g:\backup\workplace\cs-ipc\eventmessage.h
 	<string>
 	<vector>
 	<streambuf>
 
-1344418973 g:\backup\workplace\cs-ipc\client.h
+1345464269 g:\backup\workplace\cs-ipc\client.h
 	<string>
 	"EventMessage.h"
 

@@ -4,6 +4,7 @@
 
 #include <windows.h>
 #include <ctime>
+#include <signal.h>
 
 using namespace std;
 
@@ -13,8 +14,16 @@ int usage(char* progname)
     return 0;
 }
 
+bool done = false;
+
+void sigSetDone(int sig)
+{
+    done = true;
+}
+
 int main(int argc, char *argv[])
 {
+    signal(SIGINT, &sigSetDone);
     try
     {
         if(argc == 3 && strcmp(argv[1], "-s") == 0)
@@ -25,7 +34,7 @@ int main(int argc, char *argv[])
             CsIpc::EventMessage resp;
             resp.setEventType("say");
             resp.pushParam("Hello, World!");
-            while(true)
+            while(!done)
             {
                 if(serv.Peek(msg))
                 {
@@ -51,7 +60,7 @@ int main(int argc, char *argv[])
             client.Register("simplewrite");
 
             std::string msgdata;
-            while(true)
+            while(!done)
             {
                 if(client.Peek(msg))
                 {

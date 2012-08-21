@@ -52,7 +52,7 @@ namespace CsIpc
     Client::~Client()
     {
         EventMessage regMsg(DISCONNECT_MSG);
-        this->Send(regMsg, PRIORITY_HANDSHAKE);
+        this->Send(regMsg, PRIORITY_STANDARD);
 
         delete (message_queue*)this->privateQueue;
         delete (message_queue*)this->publicQueue;

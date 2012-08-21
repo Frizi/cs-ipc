@@ -118,7 +118,11 @@ namespace CsIpc
             msg.deserialize(msgBuffer);
 
             clientData* cd;
-            if(priority != PRIORITY_HANDSHAKE)
+
+            const bool msgIsHandshake = (priority == PRIORITY_HANDSHAKE
+               && (0 == msg.getEventType().compare(HANDSHAKE_MSG)));
+
+            if(!msgIsHandshake)
             {
                 clientsByName_t::iterator cdit;
                 cdit = clientsByName.find(msg.getSender());
@@ -129,8 +133,7 @@ namespace CsIpc
                 cd = cdit->second;
             }
 
-            if(priority == PRIORITY_HANDSHAKE
-               && (0 == msg.getEventType().compare(HANDSHAKE_MSG)) )
+            if(msgIsHandshake)
             {
                 std::string clientName = msg.getParamString(0);
 
@@ -162,15 +165,13 @@ namespace CsIpc
 
                 BOOST_FOREACH(std::string registered, cd->regEvts)
                 {
-                    if(registered.compare(eventName))
+                    if(0 == registered.compare(eventName))
                         return this->Peek(msg);
                 }
+                cd->regEvts.push_back(eventName);
 
                 eventTable_t::iterator it;
-
-
                 it = eventTable.find(eventName);
-
 
                 if(it == eventTable.end())
                 {
@@ -189,12 +190,12 @@ namespace CsIpc
             {
                 std::string eventName = msg.getParamString(0);
                 this->UnregisterEvent(cd, eventName);
+
+                return this->Peek(msg);
             }
-            else if(priority == PRIORITY_HANDSHAKE
+            else if(priority == PRIORITY_STANDARD
                && (0 == msg.getEventType().compare(DISCONNECT_MSG)) )
             {
-                std::string eventName = msg.getParamString(0);
-
                 std::vector<std::string> regCopy = cd->regEvts;
 
                 BOOST_FOREACH(std::string & eventName, regCopy)
@@ -209,10 +210,19 @@ namespace CsIpc
                 {
                     if(cdSearch == cd)
                     {
-                        cdSearch = this->clientRefs.back();
+                        if(this->clientRefs.size() > 1)
+                            cdSearch = this->clientRefs.back();
                         this->clientRefs.pop_back();
+
+                        delete (message_queue*)cd->privateQueue;
+                        message_queue::remove(Client::GetQueueName(cd->name).c_str());
+                        delete cd;
+
+                        break;
                     }
                 }
+
+                return this->Peek(msg);
             }
             else
             {
@@ -227,15 +237,16 @@ namespace CsIpc
     void Server::UnregisterEvent(clientData* client, std::string eventType)
     {
         // search for event in client's vector
-        BOOST_FOREACH(std::string registered, client->regEvts)
+        BOOST_FOREACH(std::string & registered, client->regEvts)
         {
-            if(registered.compare(eventType))
+            if(0 == registered.compare(eventType))
             {
                 // swap with end and pop
-                registered = client->regEvts.back();
+                if(client->regEvts.size() > 1)
+                    registered = client->regEvts.back();
                 client->regEvts.pop_back();
 
-                eventTable_t::iterator eventIter = eventTable.find(client->name);
+                eventTable_t::iterator eventIter = eventTable.find(eventType);
 
                 BOOST_FOREACH(clientData* & eventCd, eventIter->second.first)
                 {
@@ -243,7 +254,8 @@ namespace CsIpc
                     if(eventCd == client)
                     {
                         // swap with end
-                        eventCd = eventIter->second.first.back();
+                        if(eventIter->second.first.size() > 1)
+                            eventCd = eventIter->second.first.back();
                         eventIter->second.first.pop_back();
 
                         // decrement
