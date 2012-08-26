@@ -118,7 +118,7 @@ namespace CsIpc
     {
         using namespace boost::posix_time;
 
-        message_queue* const mq = (message_queue*)this->publicQueue;
+        message_queue* const mq = (message_queue*)this->privateQueue;
 
         // initialize timer
         ptime timeoutInstant;

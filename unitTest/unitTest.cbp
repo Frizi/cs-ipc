@@ -14,6 +14,11 @@
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
+				<Linker>
+					<Add option="-lcs-ipc" />
+					<Add option="-lole32" />
+					<Add option="-loleaut32" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="bin\unitTest" prefix_auto="1" extension_auto="1" />
@@ -25,6 +30,9 @@
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
+					<Add option="-lcs-ipc-d" />
+					<Add option="-lole32" />
+					<Add option="-loleaut32" />
 				</Linker>
 			</Target>
 		</Build>
@@ -37,8 +45,10 @@
 			<Add directory="D:\dev\boost_1_50_0" />
 			<Add directory="..\cs-ipc\csipc" />
 		</Compiler>
-    <Linker>
+		<Linker>
+			<Add option="-lboost_unit_test_framework-mgw46-mt-1_50" />
 			<Add directory="G:\backup\dev\boost_1_50_0\stage\lib" />
+			<Add directory="..\cs-ipc\csipc" />
 		</Linker>
 		<Unit filename="main.cpp" />
 		<Extensions>

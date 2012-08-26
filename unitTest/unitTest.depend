@@ -1,6 +1,7 @@
 # depslib dependency file v1.0
-1345890111 source:g:\backup\workplace\cs-ipc\unittest\main.cpp
+1345969000 source:g:\backup\workplace\cs-ipc\unittest\main.cpp
 	<Server.h>
+	<Client.h>
 	<boost/test/unit_test.hpp>
 
 1345566851 g:\backup\workplace\cs-ipc\cs-ipc\csipc\server.h
@@ -2636,4 +2637,9 @@
 	<boost/version.hpp>
 
 1338060789 g:\backup\dev\boost_1_50_0\boost\version.hpp
+
+1345715888 g:\backup\workplace\cs-ipc\cs-ipc\csipc\client.h
+	<string>
+	<deque>
+	"EventMessage.h"
 

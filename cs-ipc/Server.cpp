@@ -47,7 +47,6 @@ namespace CsIpc
 
     Server::~Server()
     {
-        std::cerr << "[DEBUG] message_queue remove" << Server::GetQueueName(this->name) << "\n";
         delete (message_queue*)this->publicQueue;
         message_queue::remove(Server::GetQueueName(this->name).c_str());
     }
