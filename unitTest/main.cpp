@@ -104,6 +104,7 @@ BOOST_AUTO_TEST_CASE( client_wait )
 
     BOOST_CHECK_EQUAL(recv.getEventType(), "test1");
     BOOST_CHECK_EQUAL(recv.getParamInt(0), 5);
+    BOOST_CHECK_EQUAL(recv.paramCount(), 1);
 
     BOOST_CHECK(client.Peek(recv));
 
