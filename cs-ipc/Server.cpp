@@ -184,6 +184,22 @@ namespace CsIpc
                 }
                 return this->Peek(msg);
             }
+            else if(priority == PRIORITY_COMMAND
+               && (0 == msg.getEventType().compare(DIRECTSEND_MSG)) )
+            {
+                std::string target = msg.getParamString(0);
+                clientsByName_t::iterator targetDataIt = clientsByName.find(target);
+                if(targetDataIt != clientsByName.end())
+                {
+                    std::stringbuf buf;
+
+                    std::string serializedMsg = msg.getParamString(1);
+                    buf.sputn(serializedMsg.data(), serializedMsg.size());
+                    msg.deserialize(buf);
+                    this->Send(targetDataIt->second, msg);
+                }
+                return this->Peek(msg);
+            }
             else if(priority == PRIORITY_REGISTER
                && (0 == msg.getEventType().compare(UNREGISTER_MSG)) )
             {

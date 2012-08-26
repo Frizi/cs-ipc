@@ -111,3 +111,22 @@ BOOST_AUTO_TEST_CASE( client_wait )
     BOOST_CHECK_EQUAL(recv.getEventType(), "test2");
     BOOST_CHECK_EQUAL(recv.getParamInt(0), 5);
 }
+
+BOOST_AUTO_TEST_CASE( client_sendto )
+{
+    CsIpc::Server serv("serv");
+    CsIpc::Client client1("client1", "serv");
+    CsIpc::Client client2("client2", "serv");
+    CsIpc::EventMessage send;
+    CsIpc::EventMessage recv;
+
+    BOOST_CHECK(!serv.Peek(recv)); // handshake
+
+    send.setEventType("test");
+    client1.SendTo("client2", send);
+
+    BOOST_CHECK(!serv.Peek(recv)); // sendto
+
+    BOOST_CHECK(client2.Peek(recv));
+    BOOST_CHECK_EQUAL(recv.getEventType(), "test");
+}
