@@ -31,6 +31,11 @@ namespace CsIpc
             void Broadcast(EventMessage &msg);
             bool Peek(EventMessage &msg);
 
+            size_t GetNumOfClients()
+            {
+                return clientRefs.size();
+            }
+
             static const std::string GetQueueName(std::string servername)
             {
                 return "scipcpub_" + servername;
