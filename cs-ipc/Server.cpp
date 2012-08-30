@@ -1,5 +1,6 @@
 #include "Server.h"
 #include "Client.h"
+#include "internals.h"
 
 #include <string>
 #include <iostream>
@@ -21,7 +22,7 @@ namespace CsIpc
 
         // copy name
         this->name = name;
-
+        this->emptyPacketSize = 0; // auto fill
         message_queue::remove(Server::GetQueueName(this->name).c_str());
 
         try
@@ -54,7 +55,7 @@ namespace CsIpc
     void Server::Send(const std::string &target, EventMessage &msg)
     {
         clientsByName_t::iterator cdit;
-        cdit = clientsByName.find(msg.getSender());
+        cdit = clientsByName.find(target);
         if(cdit == clientsByName.end())
         {
             throw "Unknown client choosen as target";
@@ -64,24 +65,11 @@ namespace CsIpc
 
     void Server::Send(const clientData* targetData, EventMessage &msg)
     {
-        message_queue* const mq = (message_queue*)targetData->privateQueue;
 
         // sender must be original
         // --msg.setSender(this->name);
 
-        std::stringbuf msgBuffer;
-        msg.serialize(msgBuffer);
-
-        size_t bufSize = msgBuffer.str().size();
-        if(bufSize <= MAX_MSG_SIZE)
-        {
-            mq->send(msgBuffer.str().c_str(), bufSize, PRIORITY_STANDARD);
-        }
-        else
-        {
-            std::cerr << "[ERROR] Server::Send(ClientData*, EventMessage&): message too long\n";
-            // TODO: implement spliting messages
-        }
+        MetaSendMessage(targetData->privateQueue, msg, PRIORITY_STANDARD, this->emptyPacketSize);
     }
 
     void Server::Broadcast(EventMessage &msg)
@@ -115,137 +103,225 @@ namespace CsIpc
         {
             msgBuffer.sputn(buff, recvd);
             msg.deserialize(msgBuffer);
+            return this->HandleMessage(msg, priority);
+        }
+        else return false;
+    }
 
-            clientData* cd;
+    bool Server::HandleMessage(EventMessage &msg, size_t priority)
+    {
+        clientData* cd;
 
-            const bool msgIsHandshake = (priority == PRIORITY_HANDSHAKE
-               && (0 == msg.getEventType().compare(HANDSHAKE_MSG)));
+        const bool msgIsHandshake = (priority == PRIORITY_HANDSHAKE
+           && (0 == msg.getEventType().compare(HANDSHAKE_MSG)));
 
-            if(!msgIsHandshake)
+        if(!msgIsHandshake)
+        {
+            clientsByName_t::iterator cdit;
+            cdit = clientsByName.find(msg.getSender());
+            if(cdit == clientsByName.end())
             {
-                clientsByName_t::iterator cdit;
-                cdit = clientsByName.find(msg.getSender());
-                if(cdit == clientsByName.end())
-                {
-                    throw "Unknown client tried to send message";
-                }
-                cd = cdit->second;
+                throw "Unknown client tried to send message";
+            }
+            cd = cdit->second;
+        }
+
+        if(msgIsHandshake) // handshake in constructor
+        {
+            std::string clientName = msg.getParamString(0);
+
+            clientData* client = new clientData;
+
+            client->name = msg.getParamString(0);
+            //client->regEvts.clear();
+            try
+            {
+                client->privateQueue = new message_queue
+                        (open_only
+                        ,Client::GetQueueName(client->name).c_str()
+                        );
+            } catch(interprocess_exception e) {
+                delete[] client;
+                std::cerr << "[ERROR] Client: handshake exception: " << e.what();
+                throw e;
             }
 
-            if(msgIsHandshake)
+            clientRefs.push_back(client);
+            clientsByName[client->name] = client;
+
+            return this->Peek(msg);
+        }
+        else if(priority == PRIORITY_REGISTER // Register
+           && (0 == msg.getEventType().compare(REGISTER_MSG)) )
+        {
+            std::string eventName = msg.getParamString(0);
+
+            BOOST_FOREACH(std::string registered, cd->regEvts)
             {
-                std::string clientName = msg.getParamString(0);
-
-                clientData* client = new clientData;
-
-                client->name = msg.getParamString(0);
-                //client->regEvts.clear();
-                try
-                {
-                    client->privateQueue = new message_queue
-                            (open_only
-                            ,Client::GetQueueName(client->name).c_str()
-                            );
-                } catch(interprocess_exception e) {
-                    delete[] client;
-                    std::cerr << "[ERROR] Client: handshake exception: " << e.what();
-                    throw e;
-                }
-
-                clientRefs.push_back(client);
-                clientsByName[client->name] = client;
-
-                return this->Peek(msg);
+                if(0 == registered.compare(eventName))
+                    return this->Peek(msg);
             }
-            else if(priority == PRIORITY_REGISTER
-               && (0 == msg.getEventType().compare(REGISTER_MSG)) )
+            cd->regEvts.push_back(eventName);
+
+            eventTable_t::iterator it;
+            it = eventTable.find(eventName);
+
+            if(it == eventTable.end())
             {
-                std::string eventName = msg.getParamString(0);
-
-                BOOST_FOREACH(std::string registered, cd->regEvts)
-                {
-                    if(0 == registered.compare(eventName))
-                        return this->Peek(msg);
-                }
-                cd->regEvts.push_back(eventName);
-
-                eventTable_t::iterator it;
-                it = eventTable.find(eventName);
-
-                if(it == eventTable.end())
-                {
-                    eventTable[eventName] = std::make_pair(std::vector<clientData*>(),1);
-                    eventTable[eventName].first.push_back(cd);
-                }
-                else
-                {
-                    it->second.second++;
-                    it->second.first.push_back(cd);
-                }
-                return this->Peek(msg);
-            }
-            else if(priority == PRIORITY_COMMAND
-               && (0 == msg.getEventType().compare(DIRECTSEND_MSG)) )
-            {
-                std::string target = msg.getParamString(0);
-                clientsByName_t::iterator targetDataIt = clientsByName.find(target);
-                if(targetDataIt != clientsByName.end())
-                {
-                    std::stringbuf buf;
-
-                    std::string serializedMsg = msg.getParamString(1);
-                    buf.sputn(serializedMsg.data(), serializedMsg.size());
-                    msg.deserialize(buf);
-                    this->Send(targetDataIt->second, msg);
-                }
-                return this->Peek(msg);
-            }
-            else if(priority == PRIORITY_REGISTER
-               && (0 == msg.getEventType().compare(UNREGISTER_MSG)) )
-            {
-                std::string eventName = msg.getParamString(0);
-                this->UnregisterEvent(cd, eventName);
-
-                return this->Peek(msg);
-            }
-            else if(priority == PRIORITY_STANDARD
-               && (0 == msg.getEventType().compare(DISCONNECT_MSG)) )
-            {
-                std::vector<std::string> regCopy = cd->regEvts;
-
-                BOOST_FOREACH(std::string & eventName, regCopy)
-                {
-                    this->UnregisterEvent(cd, eventName);
-                }
-
-
-                clientsByName.erase(cd->name);
-
-                BOOST_FOREACH(clientData* & cdSearch, this->clientRefs)
-                {
-                    if(cdSearch == cd)
-                    {
-                        if(this->clientRefs.size() > 1)
-                            cdSearch = this->clientRefs.back();
-                        this->clientRefs.pop_back();
-
-                        delete (message_queue*)cd->privateQueue;
-                        message_queue::remove(Client::GetQueueName(cd->name).c_str());
-                        delete cd;
-
-                        break;
-                    }
-                }
-
-                return this->Peek(msg);
+                eventTable[eventName] = std::make_pair(std::vector<clientData*>(),1);
+                eventTable[eventName].first.push_back(cd);
             }
             else
             {
-                // msg currently deserialized, all work is done
+                it->second.second++;
+                it->second.first.push_back(cd);
             }
+            return this->Peek(msg);
+        }
+        else if(priority == PRIORITY_REGISTER // Unregister
+           && (0 == msg.getEventType().compare(UNREGISTER_MSG)) )
+        {
+            std::string eventName = msg.getParamString(0);
+            this->UnregisterEvent(cd, eventName);
+
+            return this->Peek(msg);
+        }
+        else if(priority == PRIORITY_COMMAND // SendTo
+           && (0 == msg.getEventType().compare(DIRECTSEND_MSG)) )
+        {
+            std::string target = msg.getParamString(0);
+            clientsByName_t::iterator targetDataIt = clientsByName.find(target);
+            if(targetDataIt != clientsByName.end())
+            {
+                std::stringbuf buf;
+
+                std::string serializedMsg = msg.getParamString(1);
+                buf.sputn(serializedMsg.data(), serializedMsg.size());
+                msg.deserialize(buf);
+                this->Send(targetDataIt->second, msg);
+            }
+            return this->Peek(msg);
+        }
+        else if(priority == PRIORITY_COMMAND // ClientsRegistered
+           && (0 == msg.getEventType().compare(REGISTERED_MSG)) )
+        {
+            std::string eventToCheck = msg.getParamString(0);
+            CsIpc::EventMessage resp;
+            resp.setEventType(REGISTERED_RESP);
+
+            eventTable_t::iterator it = eventTable.find(eventToCheck);
+            if(it != eventTable.end())
+                resp.pushParam( it->second.second );
+            else
+                resp.pushParam( 0 );
+
+            this->Send(msg.getSender(), resp);
+            return this->Peek(msg);
+        }
+        else if(priority == PRIORITY_COMMAND // ClientsRegistered
+           && (0 == msg.getEventType().compare(ISCONNECTED_MSG)) )
+        {
+            std::string clientToCheck = msg.getParamString(0);
+            CsIpc::EventMessage resp;
+            resp.setEventType(ISCONNECTED_RESP);
+
+            clientsByName_t::iterator it = clientsByName.find(clientToCheck);
+            if(it != clientsByName.end())
+                resp.pushParam( 1 );
+            else
+                resp.pushParam( 0 );
+
+            this->Send(msg.getSender(), resp);
+            return this->Peek(msg);
+        }
+        else if( // dataPacket
+           (0 == msg.getEventType().compare(PACKET_MSG)) )
+        {
+            // arg0: current packet num
+            // arg1: num packets
+            // arg2: data
+
+            int currentPacket = msg.getParamInt(0);
+            int numPackets = msg.getParamInt(1);
+            std::string data = msg.getParamString(2);
+
+            if(cd->packetData.isActive == false)
+            {
+                if(msg.getParamInt(0) == 0)
+                {
+                    cd->packetData.isActive = true;
+                    cd->packetData.numPackets = numPackets;
+                    cd->packetData.lastPacket = currentPacket;
+                    cd->packetData.dataBuf = new std::stringbuf;
+                    cd->packetData.dataBuf->sputn(data.data(), data.size());
+                }
+                else // discard packet
+                    return this->Peek(msg);
+            }
+            else
+            {
+                if( cd->packetData.lastPacket + 1 == currentPacket && cd->packetData.numPackets == numPackets)
+                {
+                    cd->packetData.dataBuf->sputn(data.data(), data.size());
+                    cd->packetData.lastPacket = currentPacket;
+                }
+                else // discard packet
+                {
+                    cd->packetData.isActive = false;
+                    delete cd->packetData.dataBuf;
+                    cd->packetData.dataBuf = NULL;
+                    return this->Peek(msg);
+                }
+            }
+
+            if(currentPacket + 1 == numPackets)
+            {
+                msg.deserialize(*cd->packetData.dataBuf);
+
+                cd->packetData.isActive = false;
+                delete cd->packetData.dataBuf;
+                return this->HandleMessage(msg, priority);
+            }
+            return this->Peek(msg);
+        }
+
+
+        else if(priority == PRIORITY_STANDARD // Disconnect
+           && (0 == msg.getEventType().compare(DISCONNECT_MSG)) )
+        {
+            std::vector<std::string> regCopy = cd->regEvts;
+
+            BOOST_FOREACH(std::string & eventName, regCopy)
+            {
+                this->UnregisterEvent(cd, eventName);
+            }
+
+
+            clientsByName.erase(cd->name);
+
+            BOOST_FOREACH(clientData* & cdSearch, this->clientRefs)
+            {
+                if(cdSearch == cd)
+                {
+                    if(this->clientRefs.size() > 1)
+                        cdSearch = this->clientRefs.back();
+                    this->clientRefs.pop_back();
+
+                    delete (message_queue*)cd->privateQueue;
+                    message_queue::remove(Client::GetQueueName(cd->name).c_str());
+                    delete cd;
+
+                    break;
+                }
+            }
+
+            return this->Peek(msg);
         }
         else
-            return false;
+        {
+            // msg currently deserialized, all work is done
+        }
+
         return true;
     }
 

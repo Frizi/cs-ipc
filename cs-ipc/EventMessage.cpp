@@ -111,7 +111,7 @@ namespace CsIpc
                 case T_DATA:
                     size = param.data->str().size();
                     out.write((char*)size, sizeof(size_t));
-                    out.write(param.data->str().c_str(), size);
+                    out.write(param.data->str().data(), size);
                     break;
                 default:
                     assert(false);

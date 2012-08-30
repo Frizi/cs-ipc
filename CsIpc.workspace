@@ -2,7 +2,7 @@
 <CodeBlocks_workspace_file>
 	<Workspace title="Workspace">
 		<Project filename="cs-ipc/cs-ipc.cbp" />
-		<Project filename="ipcTest/ipcTest.cbp" />
 		<Project filename="unitTest/unitTest.cbp" />
+		<Project filename="ipcTest/ipcTest.cbp" />
 	</Workspace>
 </CodeBlocks_workspace_file>

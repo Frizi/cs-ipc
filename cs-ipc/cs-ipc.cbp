@@ -49,6 +49,10 @@
 		<Unit filename="csipc\EventMessage.h" />
 		<Unit filename="csipc\Server.h" />
 		<Unit filename="csipc\defines.h" />
+		<Unit filename="internals.cpp" />
+		<Unit filename="internals.h">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
 		<Extensions>
 			<code_completion />
 			<debugger />

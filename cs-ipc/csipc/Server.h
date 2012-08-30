@@ -8,14 +8,27 @@
 
 #include "EventMessage.h"
 
+#include <iostream>
 
 namespace CsIpc
 {
+    struct packetData_t
+    {
+        bool isActive;
+        std::streambuf *dataBuf;
+        int lastPacket;
+        int numPackets;
+
+        packetData_t() : isActive(false), dataBuf(NULL), lastPacket(-1), numPackets(0) {} ;
+    };
+
     struct clientData
     {
         std::string name;
         void* privateQueue;
         std::vector<std::string> regEvts;
+        packetData_t packetData;
+
     };
 
     typedef std::map<std::string, std::pair<std::vector<clientData*>,int> > eventTable_t;
@@ -41,12 +54,13 @@ namespace CsIpc
                 return "scipcpub_" + servername;
             }
         protected:
+            bool HandleMessage(EventMessage &msg, size_t priority);
             void Send(const clientData* targetData, EventMessage &msg);
             void UnregisterEvent(clientData* client, std::string eventType);
             std::string name;
             void* publicQueue;
+            size_t emptyPacketSize;
             // name of event, internal ID, times registered
-
             eventTable_t eventTable;
 
             std::vector<clientData*> clientRefs;

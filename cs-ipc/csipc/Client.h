@@ -21,6 +21,8 @@ namespace CsIpc
             void Unregister(std::string eventType);
 
             bool IsClientConnected(std::string target);
+            size_t ClientsRegistered(std::string eventType);
+
             void SendTo(std::string target, EventMessage &msg);
 
             static const std::string GetQueueName(std::string clientname)
@@ -32,6 +34,7 @@ namespace CsIpc
             std::string name;
             void* publicQueue;
             void* privateQueue;
+            size_t emptyPacketSize;
             std::deque<EventMessage> storedMessages;
     };
 }

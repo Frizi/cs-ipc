@@ -1,5 +1,6 @@
 #include "Client.h"
 #include "Server.h"
+#include "internals.h"
 
 #include <string>
 #include <iostream>
@@ -19,6 +20,8 @@ namespace CsIpc
     {
         // copy name
         this->name = name;
+        this->emptyPacketSize = 0; // auto fill
+
         message_queue::remove(Client::GetQueueName(this->name).c_str());
 
         try
@@ -67,28 +70,12 @@ namespace CsIpc
 
     void Client::Send(EventMessage &msg, unsigned int priority)
     {
-        message_queue* const mq = (message_queue*)this->publicQueue;
-
         msg.setSender(this->name);
-        std::stringbuf msgBuffer;
-        msg.serialize(msgBuffer);
-
-        size_t bufSize = msgBuffer.str().size();
-        if(bufSize <= MAX_MSG_SIZE)
-        {
-            mq->send(msgBuffer.str().c_str(), bufSize, priority);
-        }
-        else
-        {
-            std::cerr << "[ERROR] Client::Send: message too long\n";
-            // TODO: implement spliting messages
-        }
+        MetaSendMessage(this->publicQueue, msg, priority, this->emptyPacketSize);
     }
 
     void Client::SendTo(const std::string target, EventMessage &msg)
     {
-        message_queue* const mq = (message_queue*)this->publicQueue;
-
         msg.setSender(this->name);
         std::stringbuf msgBuffer;
         msg.serialize(msgBuffer);
@@ -99,19 +86,7 @@ namespace CsIpc
         targetPacket.pushParam(msgBuffer.str());
         targetPacket.setSender(this->name);
 
-        std::stringbuf packetBuffer;
-        targetPacket.serialize(packetBuffer);
-
-        size_t bufSize = packetBuffer.str().size();
-        if(bufSize <= MAX_MSG_SIZE)
-        {
-            mq->send(packetBuffer.str().c_str(), bufSize, PRIORITY_COMMAND);
-        }
-        else
-        {
-            std::cerr << "[ERROR] Client::SendTo: packet too long\n";
-            // TODO: implement spliting messages
-        }
+        this->Send(targetPacket, PRIORITY_COMMAND);
     }
 
     bool Client::WaitForEvent(EventMessage &msg, std::string eventType, unsigned int timeout)
@@ -184,34 +159,28 @@ namespace CsIpc
         return true;
     }
 
-
     bool Client::IsClientConnected(std::string target)
     {
-        message_queue* const mq = (message_queue*)this->publicQueue;
-        EventMessage request;
-        request.setEventType(ISCONNECTED_MSG);
-        request.setSender(this->name);
-        request.pushParam(target);
+        EventMessage msg;
+        msg.setEventType(ISCONNECTED_MSG);
+        msg.pushParam(target);
 
-        std::stringbuf commandBuf;
-        request.serialize(commandBuf);
+        this->Send(msg, PRIORITY_COMMAND);
+        this->WaitForEvent(msg, ISCONNECTED_RESP);
 
-        size_t bufSize = commandBuf.str().size();
-        if(bufSize <= MAX_MSG_SIZE)
-        {
-            mq->send(commandBuf.str().c_str(), bufSize, PRIORITY_COMMAND);
-        }
-        else
-        {
-            std::cerr << "[ERROR] Client::IsClientConnected: command too long\n";
-            return false;
-            // TODO: implement spliting messages
-        }
+        return ( msg.getParamInt(0) != 0 );
+    }
 
+    size_t Client::ClientsRegistered(std::string eventType)
+    {
+        EventMessage msg;
+        msg.setEventType(REGISTERED_MSG);
+        msg.pushParam(eventType);
 
+        this->Send(msg, PRIORITY_COMMAND);
+        this->WaitForEvent(msg, REGISTERED_RESP);
 
-
-        return false;
+        return (size_t)msg.getParamInt(0);
     }
 
     bool Client::Peek(EventMessage &msg)
