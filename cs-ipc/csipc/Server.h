@@ -12,24 +12,7 @@
 
 namespace CsIpc
 {
-    struct packetData_t
-    {
-        bool isActive;
-        std::streambuf *dataBuf;
-        int lastPacket;
-        int numPackets;
-
-        packetData_t() : isActive(false), dataBuf(NULL), lastPacket(-1), numPackets(0) {} ;
-    };
-
-    struct clientData
-    {
-        std::string name;
-        void* privateQueue;
-        std::vector<std::string> regEvts;
-        packetData_t packetData;
-
-    };
+    struct clientData;
 
     typedef std::map<std::string, std::pair<std::vector<clientData*>,int> > eventTable_t;
     typedef std::map<std::string, clientData*> clientsByName_t;

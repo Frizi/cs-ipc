@@ -48,6 +48,8 @@ namespace CsIpc
             throw e;
         }
 
+        this->packetData = new packetData_t;
+
         EventMessage handshakeMsg(HANDSHAKE_MSG);
         handshakeMsg.pushParam(this->name);
         this->Send(handshakeMsg, PRIORITY_HANDSHAKE);
@@ -57,6 +59,7 @@ namespace CsIpc
     {
         EventMessage regMsg(DISCONNECT_MSG);
         this->Send(regMsg, PRIORITY_STANDARD);
+        delete this->packetData;
 
         delete (message_queue*)this->privateQueue;
         delete (message_queue*)this->publicQueue;
@@ -206,10 +209,26 @@ namespace CsIpc
         {
             msgBuffer.sputn(buff, recvd);
             msg.deserialize(msgBuffer);
+
+            return HandleMessage(msg, priority);
         }
         else
             return false;
         return true;
+    }
+
+    bool Client::HandleMessage(EventMessage &msg, size_t priority)
+    {
+        if( // dataPacket
+           0 == msg.getEventType().compare(PACKET_MSG) )
+        {
+            if(HandlePacket(msg, *this->packetData))
+                return this->HandleMessage(msg, priority); // handle recieved data
+            else
+                return this->Peek(msg); // packet discarded, continue peek
+        }
+        else
+            return true;
     }
 
     void Client::Register(std::string eventType)

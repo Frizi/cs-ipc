@@ -1,6 +1,7 @@
 #include <boost/interprocess/ipc/message_queue.hpp>
 #include "csipc/EventMessage.h"
 #include "defines.h"
+#include "internals.h"
 
 using namespace boost::interprocess;
 
@@ -69,7 +70,56 @@ namespace CsIpc
 
                 MetaSendMessage(queuePtr, packet, priority, emptyPacketSize);
             }
-
         }
+    }
+
+    bool HandlePacket(EventMessage &msg, packetData_t & packetData)
+    {
+        // arg0: current packet num
+        // arg1: num packets
+        // arg2: data
+
+        int currentPacket = msg.getParamInt(0);
+        int numPackets = msg.getParamInt(1);
+        std::string data = msg.getParamString(2);
+
+        if(packetData.isActive == false)
+        {
+            if(msg.getParamInt(0) == 0)
+            {
+                packetData.isActive = true;
+                packetData.numPackets = numPackets;
+                packetData.lastPacket = currentPacket;
+                packetData.dataBuf = new std::stringbuf;
+                packetData.dataBuf->sputn(data.data(), data.size());
+            }
+            else // discard packet
+                return false;
+        }
+        else
+        {
+            if( packetData.lastPacket + 1 == currentPacket && packetData.numPackets == numPackets)
+            {
+                packetData.dataBuf->sputn(data.data(), data.size());
+                packetData.lastPacket = currentPacket;
+            }
+            else // discard packet
+            {
+                packetData.isActive = false;
+                delete packetData.dataBuf;
+                packetData.dataBuf = NULL;
+                return false;
+            }
+        }
+
+        if(currentPacket + 1 == numPackets)
+        {
+            msg.deserialize(*packetData.dataBuf);
+
+            packetData.isActive = false;
+            delete packetData.dataBuf;
+            return true;
+        }
+        return false;
     }
 }

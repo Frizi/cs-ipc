@@ -7,6 +7,8 @@
 
 namespace CsIpc
 {
+    struct packetData_t;
+
     class Client
     {
         public:
@@ -31,11 +33,13 @@ namespace CsIpc
             }
 
         protected:
+            bool HandleMessage(EventMessage &msg, size_t priority);
             std::string name;
             void* publicQueue;
             void* privateQueue;
             size_t emptyPacketSize;
             std::deque<EventMessage> storedMessages;
+            packetData_t* packetData;
     };
 }
 #endif // CLIENT_H

@@ -237,52 +237,12 @@ namespace CsIpc
         else if( // dataPacket
            (0 == msg.getEventType().compare(PACKET_MSG)) )
         {
-            // arg0: current packet num
-            // arg1: num packets
-            // arg2: data
-
-            int currentPacket = msg.getParamInt(0);
-            int numPackets = msg.getParamInt(1);
-            std::string data = msg.getParamString(2);
-
-            if(cd->packetData.isActive == false)
             {
-                if(msg.getParamInt(0) == 0)
-                {
-                    cd->packetData.isActive = true;
-                    cd->packetData.numPackets = numPackets;
-                    cd->packetData.lastPacket = currentPacket;
-                    cd->packetData.dataBuf = new std::stringbuf;
-                    cd->packetData.dataBuf->sputn(data.data(), data.size());
-                }
-                else // discard packet
-                    return this->Peek(msg);
+                if(HandlePacket(msg, cd->packetData))
+                    return this->HandleMessage(msg, priority); // handle recieved data
+                else
+                    return this->Peek(msg); // packet discarded, continue peek
             }
-            else
-            {
-                if( cd->packetData.lastPacket + 1 == currentPacket && cd->packetData.numPackets == numPackets)
-                {
-                    cd->packetData.dataBuf->sputn(data.data(), data.size());
-                    cd->packetData.lastPacket = currentPacket;
-                }
-                else // discard packet
-                {
-                    cd->packetData.isActive = false;
-                    delete cd->packetData.dataBuf;
-                    cd->packetData.dataBuf = NULL;
-                    return this->Peek(msg);
-                }
-            }
-
-            if(currentPacket + 1 == numPackets)
-            {
-                msg.deserialize(*cd->packetData.dataBuf);
-
-                cd->packetData.isActive = false;
-                delete cd->packetData.dataBuf;
-                return this->HandleMessage(msg, priority);
-            }
-            return this->Peek(msg);
         }
 
 

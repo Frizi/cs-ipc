@@ -96,6 +96,9 @@ BOOST_AUTO_TEST_CASE( long_message )
         send.pushParam(dataStr);
     }
 
+
+    std::string recievedData;
+
     #pragma omp parallel sections
     {
         #pragma omp section
@@ -105,13 +108,30 @@ BOOST_AUTO_TEST_CASE( long_message )
         #pragma omp section
         {
             while(!serv.Peek(recv)) boost::detail::Sleep(1);
-
         }
     }
 
     BOOST_CHECK_EQUAL(recv.getEventType(), "very long message");
 
-    std::string recievedData = recv.getParamString(0);
+    recievedData = recv.getParamString(0);
+    BOOST_CHECK_EQUAL( recievedData.size(), bufLen);
+    BOOST_CHECK_EQUAL( memcmp(recievedData.data(), buffer, bufLen), 0 );
+
+    #pragma omp parallel sections
+    {
+        #pragma omp section
+        {
+            while(!client.Peek(recv)) boost::detail::Sleep(1);
+        }
+        #pragma omp section
+        {
+            serv.Send("client", send);
+        }
+    }
+
+    BOOST_CHECK_EQUAL(recv.getEventType(), "very long message");
+
+    recievedData = recv.getParamString(0);
     BOOST_CHECK_EQUAL( recievedData.size(), bufLen);
     BOOST_CHECK_EQUAL( memcmp(recievedData.data(), buffer, bufLen), 0 );
 
