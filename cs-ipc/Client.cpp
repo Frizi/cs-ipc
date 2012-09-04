@@ -102,7 +102,8 @@ namespace CsIpc
         ptime timeoutInstant;
         if(timeout != 0)
         {
-            timeoutInstant = microsec_clock::universal_time() + boost::posix_time::millisec(timeout);
+			//Error	2	error C2872: 'microsec_clock' : ambiguous symbol	d:\projetos\geminics-ipc\cs-ipc\cs-ipc\client.cpp	105
+            timeoutInstant = boost::interprocess::microsec_clock::universal_time() + boost::posix_time::millisec(timeout);
         }
 
         // check local deque for message
