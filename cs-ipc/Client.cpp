@@ -94,15 +94,15 @@ namespace CsIpc
 
     bool Client::WaitForEvent(EventMessage &msg, std::string eventType, unsigned int timeout)
     {
-        using namespace boost::posix_time;
+        namespace pt = boost::posix_time;
 
         message_queue* const mq = (message_queue*)this->privateQueue;
 
         // initialize timer
-        ptime timeoutInstant;
+        pt::ptime timeoutInstant;
         if(timeout != 0)
         {
-            timeoutInstant = microsec_clock::universal_time() + boost::posix_time::millisec(timeout);
+            timeoutInstant = pt::microsec_clock::universal_time() + pt::millisec(timeout);
         }
 
         // check local deque for message
